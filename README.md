@@ -1,4 +1,4 @@
-# ovgumensabot
+# OvGU Mensa Bot (matrix)
 A [maubot](https://github.com/maubot) bot for the canteen at Otto-von-Guericke-Universität Magdeburg.
 
 ## Usage
