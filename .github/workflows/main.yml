@@ -24,7 +24,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - name: Create .mbp
+      - name: Create .mbp package
         run: |
           mkdir artifacts
           zip -9r ./artifacts/$(grep 'id:' maubot.yaml | sed 's/id: //')'-v'$(grep 'version:' maubot.yaml | sed 's/version: //').mbp maubot.yaml mensabot.py LICENSE.txt
