@@ -29,7 +29,7 @@ jobs:
           mkdir artifacts
           zip -9r ./artifacts/$(grep 'id:' maubot.yaml | sed 's/id: //')'-v'$(grep 'version:' maubot.yaml | sed 's/version: //').mbp maubot.yaml mensabot.py LICENSE.txt
           
-      - name: Release
+      - name: Release and attach artifacts
         uses: fnkr/github-action-ghr@v1
         if: startsWith(github.ref, 'refs/tags/')
         env:
