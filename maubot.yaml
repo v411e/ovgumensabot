@@ -16,7 +16,7 @@ license: MIT
 # Submodules that are imported by modules listed here don't need to be listed separately.
 # However, top-level modules must always be listed even if they're imported by other modules.
 modules:
-- mensabot
+- ovgumensabot
 
 # The main class of the plugin. Format: module/Class
 # If `module` is omitted, will default to last module specified in the module list.

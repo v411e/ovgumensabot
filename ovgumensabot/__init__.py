@@ -1,0 +1,1 @@
+from .mensabot import MensaBot
