@@ -1,14 +1,20 @@
+from datetime import datetime, timedelta
 from typing import List, Dict
 
+import pytz
 from bs4 import BeautifulSoup
 from maubot import Plugin
 
 from .meal import Meal
 
+from attr import dataclass
 
+
+@dataclass
 class Menu:
     """This class represents a menu (a list of meals)"""
-    day: str = ""
+    day: str = None
+    last_updated: datetime = None
     meals: List[Meal] = []
 
     async def init(self, mensabot: Plugin, url: str) -> None:
@@ -21,9 +27,10 @@ class Menu:
         self.day = div_mensa[0].find("table").find("thead").find("tr").find("td").string
         for mensa_table in div_mensa:
             for element in mensa_table.find("table").find("tbody").find_all("tr"):
-                meal = Meal(element.find_all("td").pop(0).find("strong").contents.pop(0).string,
-                            element.find_all("td").pop(0).contents.pop(2).string)
+                meal = Meal(name=element.find_all("td").pop(0).find("strong").contents.pop(0).string,
+                            price=element.find_all("td").pop(0).contents.pop(2).string)
                 self.meals.append(meal)
+        self.last_updated = datetime.now(tz=pytz.UTC)
 
     def __str__(self) -> str:
         plain_text = ""
