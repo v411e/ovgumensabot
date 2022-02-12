@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime
 from typing import List, Dict
 
 import pytz
@@ -13,7 +14,7 @@ from attr import dataclass
 @dataclass
 class Menu:
     """This class represents a menu (a list of meals)"""
-    day: str = None
+    day: datetime.date = None
     last_updated: datetime = None
     meals: List[Meal] = []
 
@@ -24,7 +25,12 @@ class Menu:
         mensabot.log.info(page)
         soup = BeautifulSoup(page, 'html.parser')
         div_mensa = soup.find_all("div", class_="mensa")
-        self.day = div_mensa[0].find("table").find("thead").find("tr").find("td").string
+        date_string = div_mensa[0].find("table").find("thead").find("tr").find("td").string.split(',')[1].strip()
+        logging.getLogger("maubot").info(f"split {date_string}")
+        self.day = datetime.strptime(
+            date_string,
+            "%d.%m.%Y"
+        ).date()
         for mensa_table in div_mensa:
             for element in mensa_table.find("table").find("tbody").find_all("tr"):
                 meal = Meal(name=element.find_all("td").pop(0).find("strong").contents.pop(0).string,
@@ -36,13 +42,13 @@ class Menu:
         plain_text = ""
         for meal in self.meals:
             plain_text += "\n----------\n" + str(meal)
-        return f'Speiseplan für {self.day}:{plain_text}'
+        return f"Speiseplan für {self.day.strftime('%A, %d.%m.%Y')}:{plain_text}"
 
     def to_html(self) -> str:
         plain_text = ""
         for meal in self.meals:
             plain_text += "<hr><br><strong>" + meal.name + "</strong><br>" + meal.price
-        return f'<h3>Speiseplan für {self.day}:</h3>{plain_text}'
+        return f"<h3>Speiseplan für {self.day.strftime('%A, %d.%m.%Y')}:</h3>{plain_text}"
 
     def to_list(self) -> List[List]:
         result = []

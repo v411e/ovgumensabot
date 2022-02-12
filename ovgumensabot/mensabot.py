@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 import pytz
 from markdown import markdown
@@ -12,6 +12,19 @@ from .db import MenuDatabase
 from .menu import Menu
 
 URL = 'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/'
+
+
+def date_keyword_to_date(date_keyword) -> date:
+    switcher = {
+        "today": date.today(),
+        "tomorrow": date.today() + timedelta(days=1),
+        "monday": date.today() + timedelta(days=-date.today().weekday(), weeks=1),
+        "tuesday": date.today() + timedelta(days=1 - date.today().weekday(), weeks=1),
+        "wednesday": date.today() + timedelta(days=2 - date.today().weekday(), weeks=1),
+        "thursday": date.today() + timedelta(days=3 - date.today().weekday(), weeks=1),
+        "friday": date.today() + timedelta(days=4 - date.today().weekday(), weeks=1)
+    }
+    return switcher.get(date_keyword)
 
 
 class MensaBot(Plugin):
@@ -42,13 +55,34 @@ class MensaBot(Plugin):
     @command.new("hunger", help="Show the meals")
     @command.argument("message", pass_raw=True, required=False)
     async def hunger_handler(self, evt: MessageEvent, message: str = "") -> None:
-        new_menu = await self.fetch_menus()
-        if "today" in message:
-            menus = self.db.get_menu_on_days(f"%{datetime.strftime(datetime.now(), '%d.%m.%Y')}%")
+        new_menu = False
+        if "fetch" in message:
+            new_menu = await self.fetch_menus()
+            message = message.replace('fetch', '').strip()
+        date_keywords = ["today", "tomorrow", "monday", "tuesday", "wednesday", "thursday", "friday"]
+        if any(x in message.strip() for x in date_keywords):
+            menus = self.db.get_menu_on_day(date_keyword_to_date(message))
         elif message == "":
             menus = self.db.get_latest_menu()
         else:
-            menus = self.db.get_menu_on_days(f"%{message}%")
+            try:
+                parsed_date: datetime.date = datetime.strptime(message.strip(), "%d.%m.%Y").date()
+                menus = self.db.get_menu_on_day(parsed_date)
+            except Exception:
+                content = TextMessageEventContent(
+                    msgtype=MessageType.NOTICE, format=Format.HTML,
+                    body=f"There was an error parsing your date. ({message}) Expected format: dd.mm.yyyy",
+                    formatted_body=markdown(f"There was an error parsing your date. (*{message}*)"
+                                            f"<br>Expected format: `dd.mm.yyyy`"
+                                            f"<br>"
+                                            f"<br>You can also use keywords like `today`, `tomorrow`, `monday`,"
+                                            f"`tuesday`, etc."),
+                    relates_to=RelatesTo(
+                        rel_type=RelationType("com.valentinriess.mensa"),
+                        event_id=evt.event_id,
+                    ))
+                await evt.respond(content)
+                return
 
         run = False
         for menu in menus:
