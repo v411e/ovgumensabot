@@ -18,26 +18,6 @@ class Menu:
     last_updated: datetime = None
     meals: List[Meal] = []
 
-    async def init(self, mensabot: Plugin, url: str) -> None:
-        self.meals = []
-        async with mensabot.http.get(url) as resp:
-            page = await resp.text()
-        mensabot.log.info(page)
-        soup = BeautifulSoup(page, 'html.parser')
-        div_mensa = soup.find_all("div", class_="mensa")
-        date_string = div_mensa[0].find("table").find("thead").find("tr").find("td").string.split(',')[1].strip()
-        logging.getLogger("maubot").info(f"split {date_string}")
-        self.day = datetime.strptime(
-            date_string,
-            "%d.%m.%Y"
-        ).date()
-        for mensa_table in div_mensa:
-            for element in mensa_table.find("table").find("tbody").find_all("tr"):
-                meal = Meal(name=element.find_all("td").pop(0).find("strong").contents.pop(0).string,
-                            price=element.find_all("td").pop(0).contents.pop(2).string)
-                self.meals.append(meal)
-        self.last_updated = datetime.now(tz=pytz.UTC)
-
     def __str__(self) -> str:
         plain_text = ""
         for meal in self.meals:

@@ -1,17 +1,29 @@
 import asyncio
 from datetime import datetime, timedelta, date
-
 import pytz
+
 from markdown import markdown
 from maubot import Plugin, MessageEvent
 from maubot.handlers import command
 from mautrix.errors import MForbidden
 from mautrix.types import TextMessageEventContent, MessageType, Format, RelatesTo, RelationType, RoomID
 
+from .parser import get_menus
 from .db import MenuDatabase
 from .menu import Menu
 
-URL = 'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/'
+URLS = [
+    'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/speiseplan-unten/',
+    'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/speiseplan-oben/'
+    #'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-stendal/speiseplan/',
+    #'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-herrenkrug/speiseplan/',
+    #'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-kellercafe/speiseplan/'
+]
+NOTIF_TIME = {
+    "h": 14,
+    "m": 30
+}
+TZ = pytz.timezone('Europe/Berlin')
 
 
 def date_keyword_to_date(date_keyword) -> date:
@@ -42,10 +54,11 @@ class MensaBot(Plugin):
         try:
             self.log.debug("Fetching loop started")
             while True:
-                now = datetime.now(tz=pytz.UTC)
-                next_hour = (now + timedelta(hours=1)).replace(minute=42, second=0, microsecond=0)
-                # next_hour = (now + timedelta(seconds=60))
-                await asyncio.sleep((next_hour - now).total_seconds())
+                now = datetime.now(TZ)
+                days = 1 if now > now.replace(hour=NOTIF_TIME.get("h"), minute=NOTIF_TIME.get("m"), second=0, microsecond=0) else 0
+                scheduled_time = now.replace(hour=NOTIF_TIME.get("h"), minute=NOTIF_TIME.get("m"), second=0, microsecond=0) + timedelta(days=days)
+                self.log.info(f"Scheduled fetch for {scheduled_time} in {scheduled_time - now} seconds")
+                await asyncio.sleep((scheduled_time - now).total_seconds())
                 asyncio.create_task(self.autofetch_menus())
         except asyncio.CancelledError:
             self.log.debug("Fetching loop stopped")
@@ -63,7 +76,7 @@ class MensaBot(Plugin):
         if any(x in message.strip() for x in date_keywords):
             menus = self.db.get_menu_on_day(date_keyword_to_date(message))
         elif message == "":
-            menus = self.db.get_latest_menu()
+            menus = self.db.get_menu_on_day(self.get_next_available_day())
         else:
             try:
                 parsed_date: datetime.date = datetime.strptime(message.strip(), "%d.%m.%Y").date()
@@ -121,8 +134,12 @@ class MensaBot(Plugin):
             self.db.insert_subscription(evt.room_id)
             content = TextMessageEventContent(
                 msgtype=MessageType.NOTICE, format=Format.HTML,
-                body="Enjoy your meal! Use !unsubscribe to end your subscription.",
-                formatted_body=markdown("Enjoy your meal! Use `!unsubscribe` to end your subscription."),
+                body=f"Enjoy your meal! Use !unsubscribe to end your subscription. Notifications can be expected "
+                     f"every day at {NOTIF_TIME.get('h')}:{NOTIF_TIME.get('m')}.",
+                formatted_body=markdown("Enjoy your meal! Use `!unsubscribe` to end your subscription."
+                                        "<br><br>Notifications can be expected "
+                                        f"every day at **{NOTIF_TIME.get('h')}:{NOTIF_TIME.get('m')}**."
+                                        ),
                 relates_to=RelatesTo(
                     rel_type=RelationType("com.valentinriess.mensa"),
                     event_id=evt.event_id,
@@ -153,15 +170,24 @@ class MensaBot(Plugin):
                 ))
             await evt.respond(content)
 
-    async def fetch_menus(self) -> bool:
-        menu: Menu = Menu()
-        await menu.init(self, URL)
-        return self.db.upsert_menu(menu)
+    async def fetch_menus(self) -> None:
+        days = []
+        for url in URLS:
+            menus = await get_menus(mensabot=self, url=url)
+            for menu in menus:
+                if menu.day in days:
+                    self.db.add_meals_to_menu(menu)
+                else:
+                    self.db.upsert_menu(menu)
+                    days.append(menu.day)
 
     async def autofetch_menus(self):
-        if self.db.subscriptions_not_empty() and await self.fetch_menus():
-            for menu in self.db.get_latest_menu():
-                await self.notify_subscribers(menu)
+        self.log.info("Autofetching...")
+        if self.db.subscriptions_not_empty():
+            await self.fetch_menus()
+            if self.get_next_available_day() == date.today() + timedelta(days=1):
+                for menu in self.db.get_menu_on_day(self.get_next_available_day()):
+                    await self.notify_subscribers(menu)
 
     async def notify_subscribers(self, menu: Menu):
         if self.db.subscriptions_not_empty():
@@ -181,3 +207,14 @@ class MensaBot(Plugin):
             self.log.error("Wrong Room ID")
             return False
         return True
+
+    def get_next_available_day(self):
+        today = date.today()
+        today2pm = datetime.now(TZ).replace(hour=14, minute=0, second=0, microsecond=0)
+        days = self.db.get_menu_days()
+        for day in days:
+            if day >= today:
+                if day != today:    # no menu today, returning the next available
+                    return day
+                elif datetime.now(TZ) > today2pm:
+                    return days.__next__()

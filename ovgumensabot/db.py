@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import List, Generator
+from typing import List, Iterator
 
 from sqlalchemy import (Column, String, DateTime, Date, ForeignKey, Table, MetaData,
                         select, func)
@@ -57,33 +57,38 @@ class MenuDatabase:
                             for meal in menu.meals])
                 return True  # menu is new
 
+    def add_meals_to_menu(self, menu: Menu):
+        logging.getLogger("maubot").info(f"Add meals to menu from {menu.day}.")
+        if self.menu_day_exists(menu):
+            self.db.execute(self.meals.insert(),
+                           [{"menu_day": menu.day, "price": meal.price,
+                             "name": meal.name}
+                            for meal in menu.meals])
+
     def subscriptions_not_empty(self) -> bool:
         rows = self.db.execute(select([func.count()]).select(self.subscriptions)).scalar()
-        logging.getLogger("maubot").info(f"subscriptions not empty count {rows}")
         return rows and rows > 0
 
     def subscription_exists(self, room_id: str) -> bool:
         rows = self.db.execute(
             select([func.count()]).select(self.subscriptions).where(self.subscriptions.c.room_id == room_id)).scalar()
-        logging.getLogger("maubot").info(f"subscription count {rows}")
         return rows and rows > 0
 
     def menu_day_exists(self, menu: Menu) -> bool:
         rows = self.db.execute(select([func.count()]).select(self.menus).where(self.menus.c.day == menu.day)).scalar()
-        logging.getLogger("maubot").info(f"rows {rows}")
         return rows and rows > 0
 
-    def get_menu_on_day(self, day: datetime.date) -> Generator:
+    def get_menu_on_day(self, day: datetime.date) -> Iterator[Menu]:
         logging.getLogger("maubot").info(f"Search for day {day}")
         menu_rows = self.db.execute(select([self.menus]).where(self.menus.c.day.like(day)))
         return self._rows_to_menus(menu_rows)
 
-    def get_latest_menu(self) -> Generator:
+    def get_latest_menu(self) -> Iterator[Menu]:
         menu_row = self.db.execute(select([self.menus]).order_by(self.menus.c.last_updated.desc()).limit(1))
         logging.getLogger("maubot").info(f"first menu_row {menu_row}")
         return self._rows_to_menus(menu_row)
 
-    def _rows_to_menus(self, menu_rows) -> Generator:
+    def _rows_to_menus(self, menu_rows) -> Iterator[Menu]:
         for menu_row in menu_rows:
             logging.getLogger("maubot").info(f"menu_row {menu_row}")
             meal_rows = self.db.execute(select([self.meals]).where(self.meals.c.menu_day == menu_row[0]))
@@ -102,3 +107,8 @@ class MenuDatabase:
 
     def delete_subscription(self, room_id: str) -> None:
         self.db.execute(self.subscriptions.delete().where(self.subscriptions.c.room_id == room_id))
+
+    def get_menu_days(self) -> Iterator[datetime.date]:
+        rows = self.db.execute(select([self.menus.c.day]))
+        for row in rows:
+            yield row[0]
