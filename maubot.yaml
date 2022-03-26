@@ -1,11 +1,11 @@
 # Target maubot version
-maubot: 0.1.0
+maubot: 0.2.0
 
 # The unique ID for the plugin. Java package naming style. (i.e. use your own domain, not xyz.maubot)
 id: com.valentinriess.mensa
 
 # A PEP 440 compliant version string.
-version: 0.0.5
+version: 0.0.6
 
 # The SPDX license identifier for the plugin. https://spdx.org/licenses/
 # Optional, assumes all rights reserved if omitted.
@@ -25,7 +25,7 @@ modules:
 main_class: MensaBot
 
 # Whether or not instances need a database
-database: false
+database: true
 
 #  Extra files that the upcoming build tool should include in the mbp file.
 extra_files:
@@ -36,8 +36,6 @@ extra_files:
 dependencies:
 - requests
 - beautifulsoup4
-- maubot
-- mautrix
 
 #soft_dependencies:
 #- bar>=0.1

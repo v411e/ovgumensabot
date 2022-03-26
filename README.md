@@ -4,7 +4,20 @@
 # OvGU Mensa Bot (matrix)
 A [maubot](https://github.com/maubot) bot for the canteen at Otto-von-Guericke-Universität Magdeburg.
 
-## Usage
+## Setup
 - Load the *.mbp file into your Maubot Manager
 - Create client and instance in Maubot Manager
-- Use `!hunger` in [matrix](https://matrix.to/#/@mensabot:valentinriess.com) to get the current menu at the OvGU canteen
+
+## Commands
+- `!hunger`: Get the menu (before 14:00 - today // after 14:00 - next available day)
+  - Combine with keyword to query specific day (e.g. `!hunger monday` or `!hunger 01.04.2042`):
+    - `today`
+    - `tomorrow`
+    - `dd.mm.yyyy`
+    - `monday`
+    - `tuesday`
+    - `wednesday`
+    - ...
+  - Combine with `fetch` to update internal cache (e.g. `!hunger fetch` or `!hunger fetch tomorrow`)
+- `!subscribe` Enable notifications for the menu on the next day
+- `!unsubscribe` Disable notifications for the menu on the next day

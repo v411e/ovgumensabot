@@ -1,14 +1,13 @@
 from typing import List, Dict
+from attr import dataclass
 
 
+@dataclass
 class Meal:
     """This class represents a meal"""
+    menu_day: str = None
     name: str = ""
     price: str = ""
-
-    def __init__(self, name: str, price: str):
-        self.name = name
-        self.price = price
 
     def __str__(self) -> str:
         return self.name + "\n" + self.price
