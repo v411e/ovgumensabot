@@ -68,4 +68,4 @@ async def parse_movies(mensabot: Plugin, url: str) -> :
         
         movies_dict[title] = {"date": date, "time": time}
         
-    return movies_dict
+    return movies_dict 
