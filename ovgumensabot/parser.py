@@ -63,8 +63,8 @@ async def parse_movies(mensabot: Plugin, url: str) -> :
     for movie in div_movie:
         date = movie.find("div", class_="film-row-text film-row-datum").text
         time = movie.find("div", class_="film-row-text film-row-uhrzeit").text
-        # [:-1] to ignore space at the end of each title
-        title = movie.find("div", class_="film-row-text film-row-titel").text[:-1]
+        # ignore space at the end of each title
+        title = movie.find("div", class_="film-row-text film-row-titel").strip()
         
         movies_dict[title] = {"date": date, "time": time}
         
