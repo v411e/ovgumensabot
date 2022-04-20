@@ -42,3 +42,30 @@ def parse_table(menu_table) -> Menu:
                       last_updated=datetime.now(TZ),
                       meals=meals)
     return menu
+
+# parse hoersaal im dunkeln movie calendar
+# https://www.unifilm.de/studentenkinos/MD_HiD
+async def parse_movies(mensabot: Plugin, url: str) -> :
+    async with mensabot.http.get(url) as resp:
+        page = await resp.text()
+    mensabot.log.debug(page)
+    soup = BeautifulSoup(page, "html.parser")
+    
+    # locate calendar for current semester
+    div_semester = soup.find("div", class_="kino-detail-spielplan spielplan-thisSemester")
+
+    # locate all movies in current semester
+    div_movie = div_semester.find_all("div", class_="semester-film-row")
+
+    movies_dict = {}
+
+    # for each movie locate date, time and title
+    for movie in div_movie:
+        date = movie.find("div", class_="film-row-text film-row-datum").text
+        time = movie.find("div", class_="film-row-text film-row-uhrzeit").text
+        # ignore space at the end of each title
+        title = movie.find("div", class_="film-row-text film-row-titel").strip()
+        
+        movies_dict[title] = {"date": date, "time": time}
+        
+    return movies_dict 
