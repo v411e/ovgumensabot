@@ -8,16 +8,16 @@ from maubot.handlers import command
 from mautrix.errors import MForbidden
 from mautrix.types import TextMessageEventContent, MessageType, Format, RelatesTo, RelationType, RoomID
 
-from .parser import get_menus
+from .parser import get_menus, parse_movies
 from .db import MenuDatabase
 from .menu import Menu
 
 URLS = [
     'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/speiseplan-unten/',
     'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/speiseplan-oben/'
-    #'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-stendal/speiseplan/',
-    #'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-herrenkrug/speiseplan/',
-    #'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-kellercafe/speiseplan/'
+    # 'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-stendal/speiseplan/',
+    # 'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-herrenkrug/speiseplan/',
+    # 'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-kellercafe/speiseplan/'
 ]
 NOTIF_TIME = {
     "h": 14,
@@ -39,6 +39,14 @@ def date_keyword_to_date(date_keyword) -> date:
     return switcher.get(date_keyword)
 
 
+def formatted_movie_list(movies: list[tuple[datetime, str]]) -> str:
+    ret = "Next movies: \n\n"
+    for movie in movies:
+        datetime_str = movie[0].strftime("%d.%m.%Y, %H:%M")
+        ret += f"* {datetime_str}: {movie[1]}\n"
+    return ret
+
+
 class MensaBot(Plugin):
     db: MenuDatabase
     loop_task: asyncio.Future
@@ -55,8 +63,10 @@ class MensaBot(Plugin):
             self.log.debug("Fetching loop started")
             while True:
                 now = datetime.now(TZ)
-                days = 1 if now > now.replace(hour=NOTIF_TIME.get("h"), minute=NOTIF_TIME.get("m"), second=0, microsecond=0) else 0
-                scheduled_time = now.replace(hour=NOTIF_TIME.get("h"), minute=NOTIF_TIME.get("m"), second=0, microsecond=0) + timedelta(days=days)
+                days = 1 if now > now.replace(hour=NOTIF_TIME.get("h"), minute=NOTIF_TIME.get("m"), second=0,
+                                              microsecond=0) else 0
+                scheduled_time = now.replace(hour=NOTIF_TIME.get("h"), minute=NOTIF_TIME.get("m"), second=0,
+                                             microsecond=0) + timedelta(days=days)
                 self.log.info(f"Scheduled fetch for {scheduled_time} in {scheduled_time - now} seconds")
                 await asyncio.sleep((scheduled_time - now).total_seconds())
                 asyncio.create_task(self.autofetch_menus())
@@ -170,6 +180,25 @@ class MensaBot(Plugin):
                 ))
             await evt.respond(content)
 
+    @command.new("hid", help="Next Hörsaal im Dunkeln event")
+    async def hid(self, evt: MessageEvent) -> None:
+        movies = await parse_movies(self, "https://www.unifilm.de/studentenkinos/MD_HiD")
+
+        # remove all old movies
+        movies[:] = [movie for movie in movies if movie[0].date() >= datetime.now(TZ).date()]
+
+        self.log.debug(f"Upcoming movies: {movies}")
+        if len(movies) == 0:
+            await evt.respond("No planned movies.")
+            return
+        else:
+            # only keep movies of the next movie day
+            next_movie_day = movies[0][0].date()
+            movies[:] = [movie for movie in movies if movie[0].date() == next_movie_day]
+
+        self.log.info(f"Movies on next movie day: {movies}")
+        await evt.respond(formatted_movie_list(movies))
+
     async def fetch_menus(self) -> None:
         days = []
         for url in URLS:
@@ -214,7 +243,7 @@ class MensaBot(Plugin):
         days = self.db.get_menu_days()
         for day in days:
             if day >= today:
-                if day != today:    # no menu today, returning the next available
+                if day != today:  # no menu today, returning the next available
                     return day
                 elif datetime.now(TZ) > today2pm:
                     return days.__next__()
