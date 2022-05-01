@@ -21,3 +21,4 @@ A [maubot](https://github.com/maubot) bot for the canteen at Otto-von-Guericke-U
   - Combine with `fetch` to update internal cache (e.g. `!hunger fetch` or `!hunger fetch tomorrow`)
 - `!subscribe` Enable notifications for the menu on the next day
 - `!unsubscribe` Disable notifications for the menu on the next day
+- `!hid` List the next "Hörsaal im Dunkeln" events
