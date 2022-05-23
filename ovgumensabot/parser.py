@@ -35,8 +35,13 @@ def parse_table(menu_table) -> Menu:
     day = datetime.strptime(date_string, "%d.%m.%Y").date()
     meals = []
     for meal_element in menu_table.find("tbody").find_all("tr"):
-        meal = Meal(name=meal_element.find_all("td").pop(0).find("strong").contents.pop(0).string,
-                    price=meal_element.find_all("td").pop(0).contents.pop(2).string)
+        if "Beilagen:" in meal_element.find_all("td")[0].text:
+            name = meal_element.find_all("td").pop(0).contents[0]
+            price = meal_element.find_all("td").pop(0).contents.pop(4).string
+        else:
+            name = meal_element.find_all("td").pop(0).find("strong").contents.pop(0).string
+            price = meal_element.find_all("td").pop(0).contents.pop(2).string
+        meal = Meal(name=name, price=price)
         meals.append(meal)
     menu: Menu = Menu(day=day,
                       last_updated=datetime.now(TZ),
