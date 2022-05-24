@@ -3,12 +3,11 @@ from datetime import datetime
 from typing import List, Dict
 
 import pytz
+from attr import dataclass
 from bs4 import BeautifulSoup
 from maubot import Plugin
 
 from .meal import Meal
-
-from attr import dataclass
 
 
 @dataclass
