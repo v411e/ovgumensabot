@@ -61,9 +61,9 @@ class MenuDatabase:
         logging.getLogger("maubot").info(f"Add meals to menu from {menu.day}.")
         if self.menu_day_exists(menu):
             self.db.execute(self.meals.insert(),
-                           [{"menu_day": menu.day, "price": meal.price,
-                             "name": meal.name}
-                            for meal in menu.meals])
+                            [{"menu_day": menu.day, "price": meal.price,
+                              "name": meal.name}
+                             for meal in menu.meals])
 
     def subscriptions_not_empty(self) -> bool:
         rows = self.db.execute(select([func.count()]).select(self.subscriptions)).scalar()

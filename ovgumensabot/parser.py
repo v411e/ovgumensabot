@@ -104,10 +104,12 @@ async def parse_movies(mensabot: Plugin, url: str) -> list[tuple[datetime, str]]
     soup = BeautifulSoup(page, "html.parser")
 
     # locate calendar for current semester
-    div_semester = soup.find("div", class_="kino-detail-spielplan spielplan-thisSemester")
+    div_semester = soup.find(
+        "div", class_="kino-detail-spielplan spielplan-thisSemester")
 
     # locate all movies in current semester
-    div_movie: List[BeautifulSoup] = div_semester.find_all("div", class_="semester-film-row")
+    div_movie: List[BeautifulSoup] = div_semester.find_all(
+        "div", class_="semester-film-row")
 
     movies_dict = {}
 
@@ -116,9 +118,11 @@ async def parse_movies(mensabot: Plugin, url: str) -> list[tuple[datetime, str]]
         date = movie.find("div", class_="film-row-text film-row-datum").text
         time = movie.find("div", class_="film-row-text film-row-uhrzeit").text
         date_time_str = f"{date.strip().split(' ', 1)[1]}-{time.split(' ', 1)[0]}"
-        parsed_datetime: datetime = datetime.strptime(date_time_str, "%d.%m.%Y-%H:%M")
+        parsed_datetime: datetime = datetime.strptime(
+            date_time_str, "%d.%m.%Y-%H:%M")
         # ignore space at the end of each title
-        title = movie.find("div", class_="film-row-text film-row-titel").text.strip()
+        title = movie.find(
+            "div", class_="film-row-text film-row-titel").text.strip()
 
         movies_dict[parsed_datetime] = title
 

@@ -1,16 +1,16 @@
 import asyncio
 from datetime import datetime, timedelta, date
-import pytz
 
+import pytz
 from markdown import markdown
 from maubot import Plugin, MessageEvent
 from maubot.handlers import command
 from mautrix.errors import MForbidden
 from mautrix.types import TextMessageEventContent, MessageType, Format, RelatesTo, RelationType, RoomID
 
-from .parser import get_menus, parse_movies
 from .db import MenuDatabase
 from .menu import Menu
+from .parser import get_menus, parse_movies
 
 URLS = [
     'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/speiseplan-unten/',
