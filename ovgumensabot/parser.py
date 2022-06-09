@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List
 
+import bs4.element
 import pytz
 from bs4 import BeautifulSoup
 from maubot import Plugin
@@ -8,13 +9,31 @@ from maubot import Plugin
 from .meal import Meal
 from .menu import Menu
 
+import urllib.request
+
 TZ = pytz.timezone('Europe/Berlin')
 
 
-async def get_menus(mensabot: Plugin, url: str) -> List:
-    async with mensabot.http.get(url) as resp:
-        page = await resp.text()
-    mensabot.log.debug(page)
+def get_page() -> str:
+    """Return website as html string.
+    Used for debugging.
+    
+    """
+    fp = urllib.request.urlopen(
+        "https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/speiseplan-unten/")
+    mybytes = fp.read()
+
+    page = mybytes.decode("utf8")
+    fp.close()
+    return page
+
+
+def get_menus_from_page(page: str) -> List[Menu]:
+    """Return a list of all menus from a given html source
+
+    @param page: Html source string
+    @return: List of menus
+    """
     soup = BeautifulSoup(page, 'html.parser')
     div_mensa = soup.find_all("div", class_="mensa")
 
@@ -25,35 +44,60 @@ async def get_menus(mensabot: Plugin, url: str) -> List:
 
     menus = []
     for menu_table in menu_tables:
-        mensabot.log.debug(f"mensa_table {menu_table}")
         menus.append(parse_table(menu_table))
     return menus
 
 
-def parse_table(menu_table) -> Menu:
-    date_string = menu_table.find("thead").find(
-        "tr").find("td").string.split(',')[1].strip()
+async def get_menus(mensabot: Plugin, url: str) -> List[Menu]:
+    """Wrapper of get_menus_from_page() for the maubot plugin.
+    Loads webpage from url and returns a list of menus.
+
+    @param mensabot: Mensabot maubot plugin
+    @param url: URL string
+    @return: List of menus
+    """
+    async with mensabot.http.get(url) as resp:
+        page: str = await resp.text()
+    return get_menus_from_page(page)
+
+
+def parse_table(menu_table: bs4.element.Tag) -> Menu:
+    """Returns a menu from a menu_table html-source.
+    One menu includes several meals.
+
+    @param menu_table: html-source object
+    @return: Menu object
+    """
+    date_string = menu_table.find("thead").find("tr").find("td").string.split(',')[1].strip()
     day = datetime.strptime(date_string, "%d.%m.%Y").date()
     meals = []
     for meal_element in menu_table.find("tbody").find_all("tr"):
-        if "Beilagen:" in meal_element.find_all("td")[0].text:
-            name = meal_element.find_all("td").pop(0).contents[0]
-            price = meal_element.find_all("td").pop(0).contents.pop(4).string
-        else:
-            name = meal_element.find_all("td").pop(
-                0).find("strong").contents.pop(0).string
-            price = meal_element.find_all("td").pop(0).contents.pop(2).string
+        try:
+            if "Beilagen:" in meal_element.find_all("td")[0].text:
+                name = meal_element.find_all("td").pop(0).contents[0]
+                price = "-"
+            else:
+                name = meal_element.find_all("td").pop(0).find("strong").contents.pop(0).string
+                price = meal_element.find_all("td").pop(0).contents.pop(2).string
+        except IndexError:
+            print(f"IndexError on meal_element: {meal_element}")
+            continue
         meal = Meal(name=name, price=price)
         meals.append(meal)
+
     menu: Menu = Menu(day=day,
                       last_updated=datetime.now(TZ),
                       meals=meals)
     return menu
 
 
-# parse hoersaal im dunkeln movie calendar
-# https://www.unifilm.de/studentenkinos/MD_HiD
 async def parse_movies(mensabot: Plugin, url: str) -> list[tuple[datetime, str]]:
+    """Parse hoersaal im dunkeln movie calendar → https://www.unifilm.de/studentenkinos/MD_HiD
+
+    @param mensabot: Maubot plugin
+    @param url: URL string
+    @return: Tuples of datetime and str (date and movie-title)
+    """
     async with mensabot.http.get(url) as resp:
         page = await resp.text()
     # mensabot.log.debug(page)
