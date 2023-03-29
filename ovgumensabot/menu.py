@@ -1,21 +1,21 @@
-import logging
 from datetime import datetime
 from typing import List, Dict
 
-import pytz
-from attr import dataclass
-from bs4 import BeautifulSoup
-from maubot import Plugin
+from dataclasses import dataclass
 
-from .meal import Meal
+from ovgumensabot.meal import Meal
 
 
-@dataclass
 class Menu:
     """This class represents a menu (a list of meals)"""
-    day: datetime.date = None
-    last_updated: datetime = None
-    meals: List[Meal] = []
+    day: datetime.date
+    last_updated: datetime
+    meals: List[Meal]
+
+    def __init__(self, day: datetime.date = None, last_updated: datetime = None, meals: List[Meal] = []):
+        self.day = day
+        self.last_updated = last_updated
+        self.meals = meals
 
     def __str__(self) -> str:
         plain_text = ""

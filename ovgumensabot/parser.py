@@ -1,13 +1,13 @@
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 
 import bs4.element
 import pytz
 from bs4 import BeautifulSoup
 from maubot import Plugin
 
-from .meal import Meal
-from .menu import Menu
+from ovgumensabot.meal import Meal
+from ovgumensabot.menu import Menu
 
 import urllib.request
 

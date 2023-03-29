@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from attr import dataclass
+from dataclasses import dataclass
 
 
 @dataclass
