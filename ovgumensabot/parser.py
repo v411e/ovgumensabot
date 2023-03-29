@@ -72,13 +72,41 @@ def parse_table(menu_table: bs4.element.Tag) -> Menu:
     day = datetime.strptime(date_string, "%d.%m.%Y").date()
     meals = []
     for meal_element in menu_table.find("tbody").find_all("tr"):
+        cells = list(meal_element.children)
+        # First cell contains name and price, second symbols, third for some reasons all other meals
+        name_and_price = cells[0]
+        symbols = None
+        if len(cells) > 1:
+            symbols = cells[1]
         try:
-            if "Beilagen:" in meal_element.find_all("td")[0].text:
-                name = meal_element.find_all("td").pop(0).contents[0]
+            if "Beilagen:" in name_and_price.text:
+                name = name_and_price.text
                 price = "-"
             else:
-                name = meal_element.find_all("td").pop(0).find("strong").contents.pop(0).string
-                price = meal_element.find_all("td").pop(0).contents.pop(2).string
+
+                # Price is everything else but the bold printed part
+                price = name_and_price.text.replace(name_and_price.find("strong").text, "").strip()
+                prices: List[str] = []
+                # Tag prices with [ST]udierende, [MA]itarbeitende, [EX]terne
+                for group_price, group in zip(price.split("|"), ["ST", "MA", "EX"]):
+                    prices.append(f"{group}: {group_price.strip()}€")
+                price = " / ".join(prices)
+
+                # Remove english text (enclosed in <span class="grau">)
+                name_and_price.find("span", {"class", "grau"}).decompose()
+                # German name is everything else, that's bold and not removed
+                name = name_and_price.find("strong").text
+                if symbols is not None:
+                    # Add symbols to name (vegetarian, vegan, ...)
+                    symbol_additions = []
+                    for symbol in symbols.find_all("img"):
+                        # Get simple descriptive word from img title
+                        symbol_title = symbol.get("title").replace("Symbol", "").strip()
+                        # Symbol appears twice, so check if already noted
+                        if symbol_title not in symbol_additions:
+                            symbol_additions.append(symbol_title)
+                    if symbol_additions:
+                        name = f"{name} ({'/'.join(symbol_additions)})"
         except IndexError:
             print(f"IndexError on meal_element: {meal_element}")
             continue
