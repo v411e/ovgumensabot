@@ -105,6 +105,22 @@ def parse_table(menu_table: bs4.element.Tag) -> Menu:
                         # Symbol appears twice, so check if already noted
                         if symbol_title not in symbol_additions:
                             symbol_additions.append(symbol_title)
+                    emoji_replacements = {
+                        "vegan": "🌱",
+                        "vegetarisch": "🌱🧀",
+                        "rind": "🐮",
+                        "schwein": "🐷",
+                        "geflügel": "🐔",
+                        "fisch": "🐟",
+                        "lamm": "🐑",
+                        "alkohol": "🍺",
+                        "knoblauch": "🧄",
+                    }
+                    # Replace with emojis, if not found, keep as is
+                    for symbol in symbol_additions:
+                        for key, value in emoji_replacements.items():
+                            if key in symbol.lower():
+                                symbol_additions[symbol_additions.index(symbol)] = value
                     if symbol_additions:
                         name = f"{name} ({'/'.join(symbol_additions)})"
         except IndexError:
