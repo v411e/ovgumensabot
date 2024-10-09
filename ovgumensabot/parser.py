@@ -14,13 +14,12 @@ import urllib.request
 TZ = pytz.timezone('Europe/Berlin')
 
 
-def get_page() -> str:
+def get_page(url: str) -> str:
     """Return website as html string.
     Used for debugging.
     
     """
-    fp = urllib.request.urlopen(
-        "https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/speiseplan-unten/")
+    fp = urllib.request.urlopen(url)
     mybytes = fp.read()
 
     page = mybytes.decode("utf8")
@@ -77,8 +76,8 @@ def parse_table(menu_table: bs4.element.Tag) -> Menu:
                 name = meal_element.find_all("td").pop(0).contents[0]
                 price = "-"
             else:
-                name = meal_element.find_all("td").pop(0).find("strong").contents.pop(0).string
-                price = meal_element.find_all("td").pop(0).contents.pop(2).string
+                name = meal_element.find_all("td")[0].contents[0].string
+                price = meal_element.find_all("td")[0].contents[4].string
         except IndexError:
             print(f"IndexError on meal_element: {meal_element}")
             continue
@@ -127,3 +126,12 @@ async def parse_movies(mensabot: Plugin, url: str) -> list[tuple[datetime, str]]
         movies_dict[parsed_datetime] = title
 
     return sorted(movies_dict.items())
+
+
+def main():
+    page = get_page('https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus-speiseplan-oben/')
+    menus = get_menus_from_page(page=page)
+    print(menus)
+
+if __name__ == "__main__":
+    main()

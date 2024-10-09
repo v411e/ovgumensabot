@@ -13,8 +13,8 @@ from .menu import Menu
 from .parser import get_menus, parse_movies
 
 URLS = [
-    'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/speiseplan-unten/',
-    'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus/speiseplan-oben/'
+    'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus-speiseplan-unten/',
+    'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-unicampus-speiseplan-oben/'
     # 'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-stendal/speiseplan/',
     # 'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-herrenkrug/speiseplan/',
     # 'https://www.studentenwerk-magdeburg.de/mensen-cafeterien/mensa-kellercafe/speiseplan/'
